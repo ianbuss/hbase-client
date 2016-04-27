@@ -16,11 +16,18 @@ public class ExampleJavaClient {
   private String user;
   private String table;
 
+  private boolean verbose;
+
   public ExampleJavaClient(String clientConfig, String keytabLocation, String user, String table) {
     this.clientConfig = clientConfig;
     this.keytabLocation = keytabLocation;
     this.user = user;
     this.table = table;
+  }
+
+  public ExampleJavaClient verbose(boolean verbose) {
+    this.verbose = verbose;
+    return this;
   }
 
   public void initialise() throws IOException {
@@ -41,34 +48,35 @@ public class ExampleJavaClient {
     Scan scan = new Scan();
     ResultScanner scanner = tableRef.getScanner(scan);
     long now = System.currentTimeMillis();
-    System.out.println("Starting scan");
+    if (verbose) System.out.println("Starting scan");
     for (Result res : scanner) {
-      System.out.println(res);
+      if (verbose) System.out.println(res);
     }
-    System.out.printf("Scan finished: %d ms\n\n", System.currentTimeMillis() - now);
+    if (verbose) System.out.printf("Scan finished: %d ms\n\n", System.currentTimeMillis() - now);
     tableRef.close();
   }
 
   public static void main(String[] args) throws Exception {
-    if (args.length < 3) {
-      System.err.printf("Usage: %s <conf> <user> <keytab> <table>\n", ExampleJavaClient.class);
+    if (args.length < 5) {
+      System.err.printf("Usage: %s <conf> <keytab> <user> <table> <reps> [-v]\n", ExampleJavaClient.class);
       System.exit(-1);
     }
 
     ExampleJavaClient exampleJavaClient = new ExampleJavaClient(args [0], args[1], args[2], args[3]);
     exampleJavaClient.initialise();
+    if (args.length == 6 && args[5].equals("-v")) {
+      exampleJavaClient.verbose(true);
+    }
 
-    System.out.println("Scan 1");
-    System.out.println();
-    exampleJavaClient.doScan();
+    int reps = Integer.parseInt(args[4]);
 
-    System.out.println("Scan 2");
-    System.out.println();
-    exampleJavaClient.doScan();
-
-    System.out.println("Scan 3");
-    System.out.println();
-    exampleJavaClient.doScan();
+    long start = System.currentTimeMillis();
+    System.out.println("Beginning " + reps + " scans");
+    for (int i=0; i<reps; ++i) {
+      exampleJavaClient.doScan();
+    }
+    System.out.println("Runtime: " + (System.currentTimeMillis() - start) + "ms");
+    System.out.println("Ended scans for " + args[2]);
   }
 
 }
