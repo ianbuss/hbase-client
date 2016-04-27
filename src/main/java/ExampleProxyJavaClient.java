@@ -37,14 +37,19 @@ public class ExampleProxyJavaClient {
     conf.addResource(new Path(clientConfig));
     conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
 
+    // Login as a user in the supplied keytab - this user must be authorised to proxy as
+    // other users via the hadoop.proxyuser.theuser.hosts and hadoop.proxyuser.theuser.groups
+    // properties in core-site.xml
     UserGroupInformation.setConfiguration(conf);
     UserGroupInformation.loginUserFromKeytab(user, keytabLocation);
 
+    // Create the proxy users
     proxyUserA = UserGroupInformation.createProxyUser("usera", UserGroupInformation.getLoginUser());
     proxyUserB = UserGroupInformation.createProxyUser("userb", UserGroupInformation.getLoginUser());
 
     System.out.println(conf.toString());
 
+    // Open HBase connection objects as the proxy users - do this once per proxy user per JVM
     connectionA = proxyUserA.doAs(new PrivilegedExceptionAction<Connection>() {
       @Override
       public Connection run() throws Exception {
@@ -73,6 +78,7 @@ public class ExampleProxyJavaClient {
       default: throw new IllegalArgumentException("Invalid proxy user: " + as);
     }
 
+    // Run the scan as the appropriate user
     thisProxyUser.doAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         Table tableRef = thisConnection.getTable(TableName.valueOf(table));
